@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { BSCScanResponse, Transaction, TokenTransaction } from '../types';
 
-const BSCSCAN_BASE_URL = 'https://api.bscscan.com/api';
+const BSCSCAN_BASE_URL = 'https://api.blpha.xyz/bnapi';
 
 export class BSCScanService {
   private apiKey: string;

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://www.marketwebb.me';
+const API_BASE_URL = 'https://api.blpha.xyz/bnapi';
 
 // API响应类型
 interface BNBPriceResponse {
@@ -69,7 +69,7 @@ export class MarketWebbService {
       }
 
       const response = await axios.get<BNBPriceResponse>(
-        `${API_BASE_URL}/api/v3/ticker/price`,
+        `${API_BASE_URL}/bn/ticker/price`,
         {
           params: {
             symbol: 'BNBUSDT',
@@ -117,7 +117,7 @@ export class MarketWebbService {
 
       console.log('🔄 获取Alpha代币价格列表...');
       const response = await axios.get<AlphaTokenListResponse>(
-        `${API_BASE_URL}/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list`,
+        `${API_BASE_URL}/bn/token/list`,
         {
           timeout: 15000, // 15秒超时，因为数据较大
         }
