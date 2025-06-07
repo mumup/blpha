@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://api.blpha.xyz/bnapi';
+const API_BASE_URL = 'https://bnapi.blpha.xyz';
 
 // API响应类型
 interface BNBPriceResponse {
