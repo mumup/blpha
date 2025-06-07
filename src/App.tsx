@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings } from './components/Settings';
+// import { Settings } from './components/Settings';
 import { AddressInput } from './components/AddressInput';
 import { AlphaScore } from './components/AlphaScore';
 import { PNLAnalysis } from './components/PNLAnalysis';
@@ -11,7 +11,7 @@ import { shortenAddress } from './utils';
 import type { AlphaTradeResult, PNLResult } from './types';
 
 function App() {
-  const [apiKey, setApiKey] = useState('');
+  // const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentAddress, setCurrentAddress] = useState('');
   const [alphaResult, setAlphaResult] = useState<AlphaTradeResult | null>(null);
@@ -42,15 +42,15 @@ function App() {
     setShowMigrationDialog(false);
   };
 
-  const handleApiKeyChange = (newApiKey: string) => {
-    setApiKey(newApiKey);
-  };
+  // const handleApiKeyChange = (newApiKey: string) => {
+  //   setApiKey(newApiKey);
+  // };
 
   const handleAddressSubmit = async (address: string) => {
-    if (!apiKey) {
-      setError('请先在设置中配置BSCScan API密钥');
-      return;
-    }
+    // if (!apiKey) {
+    //   setError('请先在设置中配置BSCScan API密钥');
+    //   return;
+    // }
 
     setLoading(true);
     setError('');
@@ -60,7 +60,7 @@ function App() {
 
     try {
       // 初始化服务
-      const bscscanService = new BSCScanService(apiKey);
+      const bscscanService = new BSCScanService();
       const analyzer = new TransactionAnalyzer();
 
       // 获取今日数据
@@ -114,7 +114,7 @@ function App() {
       {/* 主内容 */}
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* 设置部分 */}
-        <Settings onApiKeyChange={handleApiKeyChange} />
+        {/* <Settings onApiKeyChange={handleApiKeyChange} /> */}
 
         {/* 地址输入 */}
         <AddressInput onAddressSubmit={handleAddressSubmit} loading={loading} />

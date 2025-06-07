@@ -4,10 +4,10 @@ import type { BSCScanResponse, Transaction, TokenTransaction } from '../types';
 const BSCSCAN_BASE_URL = 'https://api.blpha.xyz/bnapi';
 
 export class BSCScanService {
-  private apiKey: string;
+  // private apiKey: string;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+  constructor() {
+    // this.apiKey = apiKey;
   }
 
   // 获取指定时间戳的区块号
@@ -19,7 +19,7 @@ export class BSCScanService {
           action: 'getblocknobytime',
           timestamp,
           closest: 'before',
-          apikey: this.apiKey,
+          // apikey: this.apiKey,
         },
       });
 
@@ -60,7 +60,7 @@ export class BSCScanService {
           page,
           offset,
           sort: 'desc',
-          apikey: this.apiKey,
+          // apikey: this.apiKey,
         },
       });
 
@@ -93,7 +93,7 @@ export class BSCScanService {
           page,
           offset,
           sort: 'desc',
-          apikey: this.apiKey,
+          // apikey: this.apiKey,
         },
       });
 
