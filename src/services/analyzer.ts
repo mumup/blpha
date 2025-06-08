@@ -122,19 +122,28 @@ export class TransactionAnalyzer {
     // 分析每个交易
     tokenTxByHash.forEach((tokenTxs, hash) => {
       const mainTx = transactionMap.get(hash);
-      if (!mainTx || tokenTxs.length !== 2) return; // 需要正好2个代币转账（买入和卖出）
+      if (!mainTx || tokenTxs.length < 2) return; // 至少需要2个代币转账（买入和卖出）
 
-      const [tx1, tx2] = tokenTxs;
-      let fromTx: TokenTransaction, toTx: TokenTransaction;
+      // 从所有代币转账中找到用户发出和收到的代币
+      const userAddress = mainTx.from.toLowerCase();
+      const fromTxs = tokenTxs.filter(tx => tx.from.toLowerCase() === userAddress);
+      const toTxs = tokenTxs.filter(tx => tx.to.toLowerCase() === userAddress);
 
-      // 确定哪个是流出，哪个是流入
-      if (tx1.from.toLowerCase() === mainTx.from.toLowerCase()) {
-        fromTx = tx1; // 用户发出的代币
-        toTx = tx2;   // 用户收到的代币
-      } else {
-        fromTx = tx2;
-        toTx = tx1;
-      }
+      // 需要至少有一个流出和一个流入
+      if (fromTxs.length === 0 || toTxs.length === 0) return;
+
+      // 选择主要的流出和流入交易（通常是价值最大的）
+      const fromTx = fromTxs.reduce((max, tx) => {
+        const maxValue = parseFloat(max.value) / Math.pow(10, parseInt(max.tokenDecimal));
+        const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal));
+        return txValue > maxValue ? tx : max;
+      });
+
+      const toTx = toTxs.reduce((max, tx) => {
+        const maxValue = parseFloat(max.value) / Math.pow(10, parseInt(max.tokenDecimal));
+        const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal));
+        return txValue > maxValue ? tx : max;
+      });
 
       const fromIsAlpha = this.isAlphaToken(fromTx.contractAddress);
       const toIsAlpha = this.isAlphaToken(toTx.contractAddress);
