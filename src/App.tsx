@@ -1,36 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 // import { Settings } from './components/Settings';
-import { AddressInput } from './components/AddressInput';
-import { AlphaScore } from './components/AlphaScore';
-import { PNLAnalysis } from './components/PNLAnalysis';
-import { MigrationDialog } from './components/MigrationDialog';
-import { BSCScanService } from './services/bscscan';
-import { TransactionAnalyzer } from './services/analyzer';
-import { StorageService } from './services/storage';
-import { shortenAddress } from './utils';
-import type { AlphaTradeResult, PNLResult } from './types';
+import { AddressInput } from "./components/AddressInput";
+import { AlphaScore } from "./components/AlphaScore";
+import { PNLAnalysis } from "./components/PNLAnalysis";
+import { MigrationDialog } from "./components/MigrationDialog";
+import { BSCScanService } from "./services/bscscan";
+import { TransactionAnalyzer } from "./services/analyzer";
+import { StorageService } from "./services/storage";
+import { shortenAddress } from "./utils";
+import type { AlphaTradeResult, PNLResult } from "./types";
 
 function App() {
   // const [apiKey, setApiKey] = useState('');
   const [loading, setLoading] = useState(false);
-  const [currentAddress, setCurrentAddress] = useState('');
+  const [currentAddress, setCurrentAddress] = useState("");
   const [alphaResult, setAlphaResult] = useState<AlphaTradeResult | null>(null);
   const [pnlResult, setPnlResult] = useState<PNLResult | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showMigrationDialog, setShowMigrationDialog] = useState(false);
 
   // 应用启动时执行数据迁移
   useEffect(() => {
     try {
       const migrationPerformed = StorageService.migrateOldData();
-      console.log('Data migration check completed');
-      
+      console.log("Data migration check completed");
+
       if (migrationPerformed) {
         // 显示迁移完成对话框
         setShowMigrationDialog(true);
       }
     } catch (error) {
-      console.error('Error during data migration:', error);
+      console.error("Error during data migration:", error);
     }
   }, []);
 
@@ -53,7 +53,7 @@ function App() {
     // }
 
     setLoading(true);
-    setError('');
+    setError("");
     setCurrentAddress(address);
     setAlphaResult(null);
     setPnlResult(null);
@@ -64,25 +64,34 @@ function App() {
       const analyzer = new TransactionAnalyzer();
 
       // 获取今日数据
-      const { transactions, tokenTransactions } = await bscscanService.getTodayData(address);
+      const { transactions, tokenTransactions } =
+        await bscscanService.getTodayData(address);
 
       // 获取所有涉及的代币地址，用于获取实时价格
-      const contractAddresses = [...new Set(tokenTransactions.map(tx => tx.contractAddress))];
-      
+      const contractAddresses = [
+        ...new Set(tokenTransactions.map((tx) => tx.contractAddress)),
+      ];
+
       // 更新实时价格
       await analyzer.updateRealTimePrices(contractAddresses);
 
       // 分析Alpha交易
-      const alphaAnalysis = analyzer.analyzeAlphaTrades(transactions, tokenTransactions);
+      const alphaAnalysis = analyzer.analyzeAlphaTrades(
+        transactions,
+        tokenTransactions
+      );
       setAlphaResult(alphaAnalysis);
 
       // 分析PNL
       const pnlAnalysis = analyzer.analyzePNL(transactions, tokenTransactions);
       setPnlResult(pnlAnalysis);
-
     } catch (err) {
-      console.error('Analysis error:', err);
-      setError(err instanceof Error ? err.message : '分析过程中发生错误，请检查API密钥和网络连接');
+      console.error("Analysis error:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "分析过程中发生错误，请检查API密钥和网络连接"
+      );
     } finally {
       setLoading(false);
     }
@@ -102,7 +111,9 @@ function App() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">🚀 BSC Alpha 交易分析</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                🚀 BSC Alpha 交易分析
+              </h1>
             </div>
             <div className="text-right text-sm text-gray-500 dark:text-gray-400">
               <div>时间: UTC 00:00 - 23:59</div>
@@ -135,9 +146,13 @@ function App() {
             <div className="flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mr-3"></div>
               <div>
-                <div className="text-blue-700 dark:text-blue-300 font-medium">正在分析交易数据...</div>
+                <div className="text-blue-700 dark:text-blue-300 font-medium">
+                  正在分析交易数据...
+                </div>
                 <div className="text-blue-600 dark:text-blue-400 text-sm mt-1">
-                  正在获取 {currentAddress ? shortenAddress(currentAddress) : ''} 的今日交易记录
+                  正在获取{" "}
+                  {currentAddress ? shortenAddress(currentAddress) : ""}{" "}
+                  的今日交易记录
                 </div>
               </div>
             </div>
@@ -149,16 +164,20 @@ function App() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
             <div className="flex flex-col sm:flex-row items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">分析结果</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">地址: {currentAddress}</p>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                  分析结果
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  地址: {currentAddress}
+                </p>
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400">
-                {new Date().toLocaleString('zh-CN', { 
-                  year: 'numeric', 
-                  month: '2-digit', 
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit'
+                {new Date().toLocaleString("zh-CN", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </div>
             </div>
@@ -173,41 +192,26 @@ function App() {
       </main>
 
       {/* 页脚 */}
-      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-12">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="text-center text-sm text-gray-500 dark:text-gray-400 space-y-2">
-            <p>
-              💡 提示: Alpha交易是指购买Alpha代币的交易，包括用稳定币(USDT/USDC)、BNB或其他Alpha代币购买Alpha代币
-            </p>
-            <p>
-              🎯 积分计算: $2/1分, $4/2分, $8/3分, $16/4分, $32/5分，超过$32后每翻倍增加1分
-            </p>
-            <p>
-              💰 价格数据: 使用MarketWebb实时价格API，稳定币=$1，Alpha代币使用实时市场价格
-            </p>
-            <p>
-              ⚠️ 注意: 价格数据可能有延迟，仅供参考。请以实际交易价格为准。
-            </p>
-            <div className="flex justify-center space-x-4 mt-4">
-              <a 
-                href="https://bscscan.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline"
-              >
-                BSCScan
-              </a>
-              <span className="text-gray-300 dark:text-gray-600">|</span>
-              <a 
-                href="https://github.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline"
-              >
-                GitHub
-              </a>
-            </div>
-          </div>
+      <footer className="mt-6">
+        <div className="author-info">
+          {/* <div className="author-avatar">
+            <img src="assets/f.jpg" alt="Freshguy Avatar" title="Freshguy" />
+          </div> */}
+          Made by Freshguy
+          <a href="https://x.com/pnl233" target="_blank">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 1200 1227"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z"
+                fill="#333333"
+              />
+            </svg>
+          </a>
         </div>
       </footer>
     </div>
