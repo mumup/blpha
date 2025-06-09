@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { BSCScanResponse, Transaction, TokenTransaction } from '../types';
 
-const BSCSCAN_BASE_URL = 'https://api.blpha.xyz';
+const BSCSCAN_BASE_URL = import.meta.env.VITE_BSCSCAN_API_BASE_URL;;
 
 export class BSCScanService {
   // private apiKey: string;

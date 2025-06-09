@@ -1,6 +1,6 @@
 import type { Transaction, TokenTransaction, AlphaToken, AlphaTradeResult, AlphaTradeDetail, PNLResult, TokenBalance } from '../types';
 import { STABLE_TOKENS, SCORE_LEVELS } from '../types';
-import { MarketWebbService } from './coingecko';
+import { MarketWebbService } from './cexapi';
 import alphaTokens from '../assets/coins/56';
 
 // Binance DEX Router地址 - 只计算与此地址交互的交易
@@ -100,8 +100,8 @@ export class TransactionAnalyzer {
   // 计算Alpha交易分数
   analyzeAlphaTrades(transactions: Transaction[], tokenTransactions: TokenTransaction[]): AlphaTradeResult {
     const alphaTrades: AlphaTradeDetail[] = [];
-    const allTrades: AlphaTradeDetail[] = []; // 包含所有交易，不仅是Alpha交易
-    let totalValue = 0;
+    let totalValue = 0; // 翻倍后的总值（用于计算分数）
+    let actualValue = 0; // 实际交易总值
 
     // 创建交易哈希到主交易的映射
     const transactionMap = new Map<string, Transaction>();
@@ -186,7 +186,10 @@ export class TransactionAnalyzer {
 
           // 添加到Alpha交易列表（计入分数）
           alphaTrades.push(tradeDetail);
-          totalValue += usdValue;
+          // Alpha分数计算时将交易量翻倍
+          totalValue += usdValue * 2;
+          // 记录实际交易量
+          actualValue += usdValue;
         }
       } else {
         // 非Alpha交易也要显示，但不计入分数
@@ -203,35 +206,22 @@ export class TransactionAnalyzer {
           usdValue = fromAmount * fromTokenPrice;
         }
 
-        if (usdValue > 0) {
-          allTrades.push({
-            hash,
-            fromToken: fromTx.contractAddress,
-            toToken: toTx.contractAddress,
-            fromAmount: fromTx.value,
-            toAmount: toTx.value,
-            fromTokenSymbol: fromTx.tokenSymbol,
-            toTokenSymbol: toTx.tokenSymbol,
-            usdValue,
-            timestamp: fromTx.timeStamp,
-          });
-        }
+        // 非Alpha交易不再在这里处理，将在PNL分析中显示
       }
     });
 
     // 计算分数
     const score = this.calculateScore(totalValue);
     const nextLevelAmount = this.getNextLevelAmount(totalValue);
-
-    // 合并所有交易并排序
-    const combinedTrades = [...alphaTrades, ...allTrades].sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp));
+    const levelInfo = this.getCurrentLevelInfo(totalValue);
 
     return {
       totalValue,
+      actualValue,
       score,
       nextLevelAmount,
       trades: alphaTrades.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp)),
-      allTrades: combinedTrades,
+      levelInfo,
     };
   }
 
@@ -266,25 +256,72 @@ export class TransactionAnalyzer {
     return score;
   }
 
-  // 获取距离下一等级的金额
+  // 获取距离下一等级的金额（用于进度条显示）
   private getNextLevelAmount(totalValue: number): number {
+    // 获取下一等级的目标值
+    let nextLevelTarget = 0;
     for (const level of SCORE_LEVELS) {
       if (totalValue < level.amount) {
-        return level.amount - totalValue;
+        nextLevelTarget = level.amount;
+        break;
       }
     }
+    
     // 如果超过了最高等级，按照指数增长继续计算
-    const lastLevel = SCORE_LEVELS[SCORE_LEVELS.length - 1];
-    let nextAmount = lastLevel.amount * 2;
-    while (totalValue >= nextAmount) {
-      nextAmount *= 2;
+    if (nextLevelTarget === 0) {
+      const lastLevel = SCORE_LEVELS[SCORE_LEVELS.length - 1];
+      nextLevelTarget = lastLevel.amount * 2;
+      while (totalValue >= nextLevelTarget) {
+        nextLevelTarget *= 2;
+      }
     }
-    return nextAmount - totalValue;
+    
+    // 返回实际需要的交易量（考虑翻倍效应，用户只需要交易一半的金额）
+    return (nextLevelTarget - totalValue) / 2;
+  }
+
+  // 获取当前等级范围信息（用于进度条计算）
+  getCurrentLevelInfo(totalValue: number): { currentLevel: number, nextLevel: number, progress: number } {
+    let currentLevel = 0;
+    let nextLevel = 0;
+
+    // 找到当前等级和下一等级
+    for (const level of SCORE_LEVELS) {
+      if (totalValue >= level.amount) {
+        currentLevel = level.amount;
+      } else {
+        nextLevel = level.amount;
+        break;
+      }
+    }
+
+    // 如果超过了最高等级，按照指数增长继续计算
+    if (nextLevel === 0) {
+      const lastLevel = SCORE_LEVELS[SCORE_LEVELS.length - 1];
+      nextLevel = lastLevel.amount * 2;
+      while (totalValue >= nextLevel) {
+        currentLevel = nextLevel;
+        nextLevel *= 2;
+      }
+    }
+
+    // 计算当前等级的进度百分比（从0%开始）
+    let progress = 0;
+    if (nextLevel > currentLevel) {
+      progress = ((totalValue - currentLevel) / (nextLevel - currentLevel)) * 100;
+    }
+
+    return {
+      currentLevel,
+      nextLevel,
+      progress: Math.max(0, Math.min(100, progress))
+    };
   }
 
   // 计算PNL
-  analyzePNL(transactions: Transaction[], tokenTransactions: TokenTransaction[]): PNLResult {
+  analyzePNL(transactions: Transaction[], tokenTransactions: TokenTransaction[], alphaTradesData?: AlphaTradeDetail[]): PNLResult {
     const tokenBalances = new Map<string, TokenBalance>();
+    const allTrades: AlphaTradeDetail[] = []; // 收集所有交易详情
     let totalGasCost = 0;
 
     // 计算Gas费用
@@ -316,6 +353,74 @@ export class TransactionAnalyzer {
     });
 
     console.log(`🔍 过滤DEX交易: ${dexTokenTransactions.length}/${tokenTransactions.length} 个代币交易与DEX Router交互`);
+    
+    // 收集所有交易详情
+    const transactionMap = new Map<string, Transaction>();
+    transactions.forEach(tx => {
+      transactionMap.set(tx.hash, tx);
+    });
+
+    const tokenTxByHash = new Map<string, TokenTransaction[]>();
+    dexTokenTransactions.forEach(tokenTx => {
+      const hash = tokenTx.hash;
+      if (!tokenTxByHash.has(hash)) {
+        tokenTxByHash.set(hash, []);
+      }
+      tokenTxByHash.get(hash)!.push(tokenTx);
+    });
+
+    // 分析每个交易以构建交易详情
+    tokenTxByHash.forEach((tokenTxs, hash) => {
+      const mainTx = transactionMap.get(hash);
+      if (!mainTx || tokenTxs.length < 2) return;
+
+      const userAddress = mainTx.from.toLowerCase();
+      const fromTxs = tokenTxs.filter(tx => tx.from.toLowerCase() === userAddress);
+      const toTxs = tokenTxs.filter(tx => tx.to.toLowerCase() === userAddress);
+
+      if (fromTxs.length === 0 || toTxs.length === 0) return;
+
+      const fromTx = fromTxs.reduce((max, tx) => {
+        const maxValue = parseFloat(max.value) / Math.pow(10, parseInt(max.tokenDecimal));
+        const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal));
+        return txValue > maxValue ? tx : max;
+      });
+
+      const toTx = toTxs.reduce((max, tx) => {
+        const maxValue = parseFloat(max.value) / Math.pow(10, parseInt(max.tokenDecimal));
+        const txValue = parseFloat(tx.value) / Math.pow(10, parseInt(tx.tokenDecimal));
+        return txValue > maxValue ? tx : max;
+      });
+
+      // 计算USD价值
+      let usdValue = 0;
+      const fromIsStable = this.isStableCoin(fromTx.contractAddress);
+      
+      if (fromIsStable) {
+        usdValue = parseFloat(fromTx.value) / Math.pow(10, parseInt(fromTx.tokenDecimal));
+      } else if (fromTx.contractAddress.toLowerCase() === STABLE_TOKENS.WBNB.toLowerCase()) {
+        const bnbAmount = parseFloat(fromTx.value) / Math.pow(10, parseInt(fromTx.tokenDecimal));
+        usdValue = bnbAmount * this.bnbPrice;
+      } else {
+        const fromAmount = parseFloat(fromTx.value) / Math.pow(10, parseInt(fromTx.tokenDecimal));
+        const fromTokenPrice = this.getTokenPrice(fromTx.contractAddress);
+        usdValue = fromAmount * fromTokenPrice;
+      }
+
+      if (usdValue > 0) {
+        allTrades.push({
+          hash,
+          fromToken: fromTx.contractAddress,
+          toToken: toTx.contractAddress,
+          fromAmount: fromTx.value,
+          toAmount: toTx.value,
+          fromTokenSymbol: fromTx.tokenSymbol,
+          toTokenSymbol: toTx.tokenSymbol,
+          usdValue,
+          timestamp: fromTx.timeStamp,
+        });
+      }
+    });
     
     dexTokenTransactions.forEach(tokenTx => {
       const contractAddress = tokenTx.contractAddress.toLowerCase();
@@ -362,6 +467,10 @@ export class TransactionAnalyzer {
       tokenBalances: tokenBalanceArray.filter(balance => 
         parseFloat(balance.totalIn) > 0 || parseFloat(balance.totalOut) > 0
       ),
+      // 所有交易详情（按时间倒序排列）
+      allTrades: allTrades.sort((a, b) => parseInt(b.timestamp) - parseInt(a.timestamp)),
+      // Alpha交易详情（传入的或空数组）
+      trades: alphaTradesData || [],
     };
   }
 } 

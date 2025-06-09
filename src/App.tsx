@@ -82,8 +82,8 @@ function App() {
       );
       setAlphaResult(alphaAnalysis);
 
-      // 分析PNL
-      const pnlAnalysis = analyzer.analyzePNL(transactions, tokenTransactions);
+      // 分析PNL（传递Alpha交易数据）
+      const pnlAnalysis = analyzer.analyzePNL(transactions, tokenTransactions, alphaAnalysis.trades);
       setPnlResult(pnlAnalysis);
     } catch (err) {
       console.error("Analysis error:", err);

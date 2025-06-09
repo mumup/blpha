@@ -103,11 +103,12 @@ export interface Settings {
 
 // 交易分析结果类型
 export interface AlphaTradeResult {
-  totalValue: number; // 以 USD 计算的总交易量
+  totalValue: number; // 以 USD 计算的总交易量（翻倍后的值）
+  actualValue: number; // 实际交易量（未翻倍的值）
   score: number; // 计算出的积分
-  nextLevelAmount: number; // 距离下一等级还需要的交易量
+  nextLevelAmount: number; // 距离下一等级还需要的实际交易量
   trades: AlphaTradeDetail[]; // Alpha交易（计入分数）
-  allTrades: AlphaTradeDetail[]; // 所有交易（包括非Alpha）
+  levelInfo: { currentLevel: number, nextLevel: number, progress: number }; // 等级进度信息
 }
 
 export interface AlphaTradeDetail {
@@ -126,6 +127,8 @@ export interface PNLResult {
   totalPNL: number;
   totalGasCost: number;
   tokenBalances: TokenBalance[];
+  allTrades: AlphaTradeDetail[]; // 移动所有交易详情到PNL模块
+  trades: AlphaTradeDetail[]; // Alpha交易（计入分数）
 }
 
 export interface TokenBalance {
