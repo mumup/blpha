@@ -1,13 +1,13 @@
 import React from 'react';
 import type { AlphaTradeResult } from '../types';
-import { formatUSD, getProgressPercentage } from '../utils';
+import { formatUSD } from '../utils';
 
 interface AlphaScoreProps {
   result: AlphaTradeResult;
 }
 
 export const AlphaScore: React.FC<AlphaScoreProps> = ({ result }) => {
-  const { totalValue, actualValue, score, nextLevelAmount, levelInfo } = result;
+  const { totalValue, score, nextLevelAmount, levelInfo } = result;
   
   // 使用新的进度条计算（从0%开始）
   const currentLevelProgress = levelInfo.progress;
