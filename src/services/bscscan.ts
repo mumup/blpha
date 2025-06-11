@@ -5,9 +5,20 @@ const BSCSCAN_BASE_URL = import.meta.env.VITE_BSCSCAN_API_BASE_URL;;
 
 export class BSCScanService {
   // private apiKey: string;
+  
+  // 当天开始区块号缓存
+  private static todayStartBlockCache: { blockNumber: string; date: string } | null = null;
 
   constructor() {
     // this.apiKey = apiKey;
+  }
+
+  // 检查缓存是否为当天的
+  private static isTodayCache(date: string): boolean {
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    return date === todayString;
   }
 
   // 获取指定时间戳的区块号
@@ -35,10 +46,27 @@ export class BSCScanService {
 
   // 获取当天开始的区块号（UTC 00:00）
   async getTodayStartBlock(): Promise<string> {
+    // 检查缓存
+    if (BSCScanService.todayStartBlockCache && BSCScanService.isTodayCache(BSCScanService.todayStartBlockCache.date)) {
+      console.log(`📋 使用当天开始区块号缓存: ${BSCScanService.todayStartBlockCache.blockNumber}`);
+      return BSCScanService.todayStartBlockCache.blockNumber;
+    }
+
+    console.log('🔄 获取当天开始的区块号...');
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     const timestamp = Math.floor(todayStart.getTime() / 1000);
-    return this.getBlockByTimestamp(timestamp);
+    const blockNumber = await this.getBlockByTimestamp(timestamp);
+    
+    // 更新缓存
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    BSCScanService.todayStartBlockCache = {
+      blockNumber,
+      date: today.toISOString().split('T')[0] // YYYY-MM-DD
+    };
+    
+    console.log(`✅ 获取并缓存当天开始区块号: ${blockNumber}`);
+    return blockNumber;
   }
 
   // 获取地址的所有交易记录

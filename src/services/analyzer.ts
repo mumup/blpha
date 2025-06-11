@@ -240,8 +240,6 @@ export class TransactionAnalyzer {
       }
     }
 
-    debugger
-
     // 处理超过最高等级的情况
     if (nextLevel === 0) {
       const lastLevel = SCORE_LEVELS[SCORE_LEVELS.length - 1];
