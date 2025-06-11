@@ -5,6 +5,7 @@ import alphaTokens from '../assets/coins/56';
 
 // Binance DEX Router地址 - 只计算与此地址交互的交易
 const BINANCE_DEX_ROUTER = '0xb300000b72DEAEb607a12d5f54773D1C19c7028d'.toLowerCase();
+const PANCAKE_SWAP_ROUTER = '0xd9C500DfF816a1Da21A48A732d3498Bf09dc9AEB'.toLowerCase();
 
 interface TradeInfo {
   hash: string;
@@ -23,7 +24,7 @@ export class TransactionAnalyzer {
   constructor() {
     this.alphaTokens = alphaTokens as AlphaToken[];
     this.alphaTokenMap = new Map();
-    
+
     // 创建地址到代币的映射
     this.alphaTokens.forEach(token => {
       this.alphaTokenMap.set(token.contractAddress.toLowerCase(), token);
@@ -60,7 +61,7 @@ export class TransactionAnalyzer {
   // 获取代币当前价格（优先使用实时价格）
   getTokenPrice(contractAddress: string): number {
     const normalizedAddress = contractAddress.toLowerCase();
-    
+
     const realTimePrice = this.realTimePrices.get(normalizedAddress);
     if (realTimePrice !== undefined) {
       return realTimePrice;
@@ -101,7 +102,7 @@ export class TransactionAnalyzer {
   // 解析所有交易，提取交易信息（核心共用方法）
   private parseAllTrades(transactions: Transaction[], tokenTransactions: TokenTransaction[]): TradeInfo[] {
     const trades: TradeInfo[] = [];
-    
+
     // 创建交易哈希到主交易的映射
     const transactionMap = new Map<string, Transaction>();
     transactions.forEach(tx => {
@@ -112,8 +113,11 @@ export class TransactionAnalyzer {
     const dexTokenTransactions = tokenTransactions.filter(tokenTx => {
       const mainTx = transactions.find(tx => tx.hash === tokenTx.hash);
       if (!mainTx) return false;
-      return mainTx.to.toLowerCase() === BINANCE_DEX_ROUTER || 
-             mainTx.from.toLowerCase() === BINANCE_DEX_ROUTER;
+      return mainTx.to.toLowerCase() === BINANCE_DEX_ROUTER ||
+        mainTx.from.toLowerCase() === BINANCE_DEX_ROUTER ||
+        // 从pancake swap 卖出的交易
+        mainTx.from.toLowerCase() === PANCAKE_SWAP_ROUTER ||
+        mainTx.to.toLowerCase() === PANCAKE_SWAP_ROUTER;
     });
 
     console.log(`🔍 过滤DEX交易: ${dexTokenTransactions.length}/${tokenTransactions.length} 个代币交易与DEX Router交互`);
@@ -174,7 +178,7 @@ export class TransactionAnalyzer {
   // 计算USD价值
   private calculateUSDValue(fromTx: TokenTransaction): number {
     const fromIsStable = this.isStableCoin(fromTx.contractAddress);
-    
+
     if (fromIsStable) {
       return parseFloat(fromTx.value) / Math.pow(10, parseInt(fromTx.tokenDecimal));
     } else if (fromTx.contractAddress.toLowerCase() === STABLE_TOKENS.WBNB.toLowerCase()) {
@@ -192,10 +196,10 @@ export class TransactionAnalyzer {
     const fromIsAlpha = this.isAlphaToken(fromTx.contractAddress);
     const toIsAlpha = this.isAlphaToken(toTx.contractAddress);
     const fromIsStable = this.isStableCoin(fromTx.contractAddress);
-    
-    return (fromIsStable && toIsAlpha) || 
-           (fromTx.contractAddress.toLowerCase() === STABLE_TOKENS.WBNB.toLowerCase() && toIsAlpha) || 
-           (fromIsAlpha && toIsAlpha);
+
+    return (fromIsStable && toIsAlpha) ||
+      (fromTx.contractAddress.toLowerCase() === STABLE_TOKENS.WBNB.toLowerCase() && toIsAlpha) ||
+      (fromIsAlpha && toIsAlpha);
   }
 
   // 将TradeInfo转换为AlphaTradeDetail
@@ -214,12 +218,12 @@ export class TransactionAnalyzer {
   }
 
   // 计算等级信息（统一的等级计算方法）
-  private calculateLevelInfo(totalValue: number): { 
-    currentLevel: number; 
-    nextLevel: number; 
-    progress: number; 
-    score: number; 
-    nextLevelAmount: number; 
+  private calculateLevelInfo(totalValue: number): {
+    currentLevel: number;
+    nextLevel: number;
+    progress: number;
+    score: number;
+    nextLevelAmount: number;
   } {
     let currentLevel = 0;
     let nextLevel = 0;
@@ -244,19 +248,19 @@ export class TransactionAnalyzer {
       nextLevel = lastLevel.amount * 2;
       // let currentAmount = lastLevel.amount;
       let currentScore = lastLevel.score;
-      
+
       while (totalValue >= nextLevel) {
         currentLevel = nextLevel;
         nextLevel *= 2;
         currentScore += 1;
       }
-      
+
       // 继续计算超出部分的分数
       // while (totalValue >= currentAmount * 2) {
       //   currentAmount *= 2;
       //   currentScore += 1;
       // }
-      
+
       score = currentScore;
     }
 
@@ -282,11 +286,11 @@ export class TransactionAnalyzer {
   analyzeAlphaTrades(transactions: Transaction[], tokenTransactions: TokenTransaction[]): AlphaTradeResult {
     const allTrades = this.parseAllTrades(transactions, tokenTransactions);
     const alphaTrades = allTrades.filter(trade => trade.isAlphaTrade);
-    
+
     // 计算交易量
     let actualValue = 0;
     let totalValue = 0;
-    
+
     alphaTrades.forEach(trade => {
       actualValue += trade.usdValue;
       totalValue += trade.usdValue * 2; // Alpha分数翻倍
@@ -314,7 +318,7 @@ export class TransactionAnalyzer {
   analyzePNL(transactions: Transaction[], tokenTransactions: TokenTransaction[], alphaTradesData?: AlphaTradeDetail[]): PNLResult {
     const allTrades = this.parseAllTrades(transactions, tokenTransactions);
     const tokenBalances = new Map<string, TokenBalance>();
-    
+
     // 计算Gas费用
     const totalGasCost = transactions.reduce((total, tx) => {
       const gasUsed = parseInt(tx.gasUsed);
@@ -326,13 +330,16 @@ export class TransactionAnalyzer {
 
     // 获取用户地址
     const primaryUserAddress = transactions[0]?.from.toLowerCase() || '';
-    
+
     // 过滤DEX交易的代币转账
     const dexTokenTransactions = tokenTransactions.filter(tokenTx => {
       const mainTx = transactions.find(tx => tx.hash === tokenTx.hash);
       if (!mainTx) return false;
-      return mainTx.to.toLowerCase() === BINANCE_DEX_ROUTER || 
-             mainTx.from.toLowerCase() === BINANCE_DEX_ROUTER;
+      return mainTx.to.toLowerCase() === BINANCE_DEX_ROUTER ||
+        mainTx.from.toLowerCase() === BINANCE_DEX_ROUTER ||
+        // 从pancake swap 卖出的交易
+        mainTx.from.toLowerCase() === PANCAKE_SWAP_ROUTER ||
+        mainTx.to.toLowerCase() === PANCAKE_SWAP_ROUTER;
     });
 
     // 计算代币余额
@@ -368,7 +375,7 @@ export class TransactionAnalyzer {
 
     const tokenBalanceArray = Array.from(tokenBalances.values())
       .filter(balance => parseFloat(balance.totalIn) > 0 || parseFloat(balance.totalOut) > 0);
-    
+
     const totalPNL = tokenBalanceArray.reduce((sum, balance) => sum + balance.pnl, 0);
 
     return {
