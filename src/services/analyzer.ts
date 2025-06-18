@@ -1,7 +1,6 @@
-import type { Transaction, TokenTransaction, AlphaToken, AlphaTradeResult, AlphaTradeDetail, PNLResult, TokenBalance } from '../types';
+import type { Transaction, TokenTransaction, AlphaTradeResult, AlphaTradeDetail, PNLResult, TokenBalance } from '../types';
 import { STABLE_TOKENS, SCORE_LEVELS } from '../types';
 import { MarketWebbService } from './cexapi';
-import alphaTokens from '../assets/coins/56';
 
 // Binance DEX Router地址 - 只计算与此地址交互的交易
 const BINANCE_DEX_ROUTER = '0xb300000b72DEAEb607a12d5f54773D1C19c7028d'.toLowerCase();
@@ -16,19 +15,12 @@ interface TradeInfo {
 }
 
 export class TransactionAnalyzer {
-  private alphaTokens: AlphaToken[];
-  private alphaTokenMap: Map<string, AlphaToken>;
   private realTimePrices: Map<string, number> = new Map();
+  private realTimeAlphaTokens: Map<string, number> = new Map();
   private bnbPrice: number = 600;
 
   constructor() {
-    this.alphaTokens = alphaTokens as AlphaToken[];
-    this.alphaTokenMap = new Map();
-
-    // 创建地址到代币的映射
-    this.alphaTokens.forEach(token => {
-      this.alphaTokenMap.set(token.contractAddress.toLowerCase(), token);
-    });
+    // 移除静态数据，改用实时数据
   }
 
   // 获取实时价格
@@ -37,6 +29,11 @@ export class TransactionAnalyzer {
       // 获取主要币种价格
       const mainPrices = await MarketWebbService.getMainCoinPrices();
       this.bnbPrice = mainPrices.bnb;
+
+      // 获取所有Alpha代币价格列表
+      console.log('🔄 获取实时Alpha代币价格列表...');
+      this.realTimeAlphaTokens = await MarketWebbService.getAlphaTokenPrices();
+      console.log(`✅ 获取到 ${this.realTimeAlphaTokens.size} 个Alpha代币价格`);
 
       // 过滤掉稳定币和WBNB，只查询需要的代币价格
       const uniqueAddresses = [...new Set(contractAddresses.map(addr => addr.toLowerCase()))]
@@ -62,9 +59,16 @@ export class TransactionAnalyzer {
   getTokenPrice(contractAddress: string): number {
     const normalizedAddress = contractAddress.toLowerCase();
 
+    // 首先检查是否在实时价格中
     const realTimePrice = this.realTimePrices.get(normalizedAddress);
     if (realTimePrice !== undefined) {
       return realTimePrice;
+    }
+
+    // 检查是否在Alpha代币价格列表中
+    const alphaPrice = this.realTimeAlphaTokens.get(normalizedAddress);
+    if (alphaPrice !== undefined) {
+      return alphaPrice;
     }
 
     if (this.isStableCoin(contractAddress)) {
@@ -75,28 +79,19 @@ export class TransactionAnalyzer {
       return this.bnbPrice;
     }
 
-    const tokenInfo = this.getTokenInfo(contractAddress);
-    if (tokenInfo) {
-      return parseFloat(tokenInfo.price);
-    }
-
     return 0;
   }
 
   // 检查是否为Alpha代币
   isAlphaToken(contractAddress: string): boolean {
-    return this.alphaTokenMap.has(contractAddress.toLowerCase());
+    const normalizedAddress = contractAddress.toLowerCase();
+    return this.realTimeAlphaTokens.has(normalizedAddress);
   }
 
   // 检查是否为稳定币
   isStableCoin(contractAddress: string): boolean {
     const addr = contractAddress.toLowerCase();
     return Object.values(STABLE_TOKENS).some(stableAddr => stableAddr.toLowerCase() === addr);
-  }
-
-  // 获取代币信息
-  getTokenInfo(contractAddress: string): AlphaToken | undefined {
-    return this.alphaTokenMap.get(contractAddress.toLowerCase());
   }
 
   // 解析所有交易，提取交易信息（核心共用方法）
