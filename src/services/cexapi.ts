@@ -117,7 +117,7 @@ export class MarketWebbService {
 
       console.log('🔄 获取Alpha代币价格列表...');
       const response = await axios.get<AlphaTokenListResponse>(
-        `${API_BASE_URL}/bn/token/list`,
+        `https://www.marketwebb.me/bapi/defi/v1/public/wallet-direct/buw/wallet/cex/alpha/all/token/list`,
         {
           timeout: 15000, // 15秒超时，因为数据较大
         }
