@@ -148,18 +148,18 @@ const Activities: React.FC = () => {
 
   const ActivityCard: React.FC<{ activity: Activity }> = ({ activity }) => {
     return (
-      <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {activity.symbol}
               {calculateActivityValue(activity) && (
-                <span className="ml-2 text-sm font-normal text-gray-500">
+                <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
                   {calculateActivityValue(activity)}
                 </span>
               )}
             </h3>
-            <p className="text-sm text-gray-600">{activity.name}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{activity.name}</p>
           </div>
           <div className="flex flex-row items-end space-x-2">
             <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
@@ -183,18 +183,18 @@ const Activities: React.FC = () => {
         
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600">开始时间:</span>
-            <span className="font-medium">{formatDateTime(activity.startTime)}</span>
+            <span className="text-gray-600 dark:text-gray-400">开始时间:</span>
+            <span className="font-medium text-gray-900 dark:text-white">{formatDateTime(activity.startTime)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">积分要求:</span>
-            <span className="font-medium">{activity.pointsRequire === '' ? '待定' : activity.pointsRequire}</span>
+            <span className="text-gray-600 dark:text-gray-400">积分要求:</span>
+            <span className="font-medium text-gray-900 dark:text-white">{activity.pointsRequire === '' ? '待定' : activity.pointsRequire}</span>
           </div>
           {
             activity.amount && (
               <div className="flex justify-between">
-                <span className="text-gray-600">数量:</span>
-                <span className="font-medium">{activity.amount}</span>
+                <span className="text-gray-600 dark:text-gray-400">数量:</span>
+                <span className="font-medium text-gray-900 dark:text-white">{activity.amount}</span>
               </div>   
             )
           }
@@ -205,10 +205,10 @@ const Activities: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">加载中...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">加载中...</p>
         </div>
       </div>
     );
@@ -216,10 +216,10 @@ const Activities: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️</div>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="text-red-500 dark:text-red-400 text-xl mb-4">⚠️</div>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button 
             onClick={fetchActivities}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -234,16 +234,16 @@ const Activities: React.FC = () => {
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">活动日历</h1>
-        <p className="text-gray-600">查看最新的 Alpha 活动信息</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">活动日历</h1>
+        <p className="text-gray-600 dark:text-gray-400">查看最新的 Alpha 活动信息</p>
       </div>
 
         {/* 今日活动 */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <div className="w-2 h-8 bg-green-500 rounded-full mr-3"></div>
-            <h2 className="text-2xl font-semibold text-gray-900">今日活动</h2>
-            <span className="ml-3 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">今日活动</h2>
+            <span className="ml-3 px-3 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 text-sm font-medium rounded-full">
               {todayActivities.length} 个活动
             </span>
           </div>
@@ -255,9 +255,9 @@ const Activities: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
-              <div className="text-gray-400 text-6xl mb-4">📅</div>
-              <p className="text-gray-600">今日暂无活动</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700">
+              <div className="text-gray-400 dark:text-gray-500 text-6xl mb-4">📅</div>
+              <p className="text-gray-600 dark:text-gray-400">今日暂无活动</p>
             </div>
           )}
         </div>
@@ -266,8 +266,8 @@ const Activities: React.FC = () => {
         <div>
           <div className="flex items-center mb-4">
             <div className="w-2 h-8 bg-blue-500 rounded-full mr-3"></div>
-            <h2 className="text-2xl font-semibold text-gray-900">未来活动</h2>
-            <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">未来活动</h2>
+            <span className="ml-3 px-3 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 text-sm font-medium rounded-full">
               {futureActivities.length} 个活动
             </span>
           </div>
@@ -279,9 +279,9 @@ const Activities: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-lg p-8 text-center border border-gray-200">
-              <div className="text-gray-400 text-6xl mb-4">🔮</div>
-              <p className="text-gray-600">暂无未来活动</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center border border-gray-200 dark:border-gray-700">
+              <div className="text-gray-400 dark:text-gray-500 text-6xl mb-4">🔮</div>
+              <p className="text-gray-600 dark:text-gray-400">暂无未来活动</p>
             </div>
           )}
         </div>
