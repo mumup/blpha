@@ -155,4 +155,32 @@ export const SCORE_LEVELS = [
   { amount: 8, score: 3 },
   { amount: 16, score: 4 },
   { amount: 32, score: 5 },
-] as const; 
+] as const;
+
+// 活动相关类型
+export interface Activity {
+  name: string;
+  symbol: string;
+  type: string;
+  startTime: string;
+  endTime: string;
+  isFCFS: boolean;
+  points: string;
+  pointsRequire: string;
+  isStage2: boolean;
+  amount: string;
+  isFutures: boolean;
+  futuresTime: string;
+  chain: string;
+  isSpot: boolean;
+  isSecondStage?: boolean; // 标识是否为第二阶段（用于内部处理）
+}
+
+export interface ActivitiesResponse {
+  success: boolean;
+  data: Activity[];
+  total: number;
+  todayStart: string;
+  currentTime: string;
+  timestamp: string;
+} 
