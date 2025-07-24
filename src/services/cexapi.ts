@@ -106,7 +106,41 @@ export class MarketWebbService {
     };
   }
 
-  // 获取Alpha代币价格列表
+  // 获取Alpha代币价格列表（包含symbol信息）
+  static async getAlphaTokenPricesWithSymbols(): Promise<Map<string, { price: number; symbol: string }>> {
+    try {
+      console.log('🔄 获取Alpha代币价格列表...');
+      const response = await axios.get<AlphaTokenListResponse>(
+        `${API_BASE_URL}/bn/token/list`,
+        {
+          timeout: 15000, // 15秒超时，因为数据较大
+        }
+      );
+
+      if (!response.data.success || !response.data.data) {
+        throw new Error('API响应失败或数据为空');
+      }
+
+      // 过滤BSC链的代币并创建价格映射
+      const priceMap = new Map<string, { price: number; symbol: string }>();
+      const bscTokens = response.data.data.filter(token => token.chainName === 'BSC');
+      
+      bscTokens.forEach(token => {
+        const price = parseFloat(token.price);
+        if (!isNaN(price) && price > 0) {
+          priceMap.set(token.symbol.toUpperCase(), { price, symbol: token.symbol });
+        }
+      });
+
+      console.log(`✅ 获取到 ${bscTokens.length} 个BSC Alpha代币价格`);
+      return priceMap;
+    } catch (error) {
+      console.error('Error fetching Alpha token prices:', error);
+      return new Map();
+    }
+  }
+
+  // 获取Alpha代币价格列表（保持向后兼容）
   static async getAlphaTokenPrices(): Promise<Map<string, number>> {
     try {
       // 检查缓存

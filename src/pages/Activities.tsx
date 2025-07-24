@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { Layout } from '../components/Layout';
+import { MarketWebbService } from '../services/cexapi';
 import type { Activity, ActivitiesResponse } from '../types';
 
 const Activities: React.FC = () => {
@@ -9,6 +10,7 @@ const Activities: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [todayActivities, setTodayActivities] = useState<Activity[]>([]);
   const [futureActivities, setFutureActivities] = useState<Activity[]>([]);
+  const [tokenPrices, setTokenPrices] = useState<Map<string, { price: number; symbol: string }>>(new Map());
 
   useEffect(() => {
     fetchActivities();
@@ -18,11 +20,18 @@ const Activities: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('https://calendar.blpha.xyz/api/activities');
-      const data: ActivitiesResponse = await response.json();
+      
+      // 并行获取活动数据和价格数据
+      const [activitiesResponse, pricesResponse] = await Promise.all([
+        fetch('https://calendar.blpha.xyz/api/activities'),
+        MarketWebbService.getAlphaTokenPricesWithSymbols()
+      ]);
+      
+      const data: ActivitiesResponse = await activitiesResponse.json();
       
       if (data.success) {
         setActivities(data.data);
+        setTokenPrices(pricesResponse);
         categorizeActivities(data.data);
       } else {
         setError('获取活动数据失败');
@@ -106,9 +115,9 @@ const Activities: React.FC = () => {
 
   const getTypeLabel = (type: string) => {
     const typeMap: { [key: string]: string } = {
-      'booster': '助推器',
+      'booster': 'booster',
       'tge': 'TGE',
-      'airdrop': '空投'
+      'airdrop': '空投',
     };
     return typeMap[type] || type;
   };
@@ -122,12 +131,34 @@ const Activities: React.FC = () => {
   //   return chainMap[chain] || chain;
   // };
 
+  // 计算活动价值
+  const calculateActivityValue = (activity: Activity): string => {
+    if (!activity.amount || activity.amount === '') return '';
+    
+    // 通过symbol匹配价格
+    const tokenData = tokenPrices.get(activity.symbol.toUpperCase());
+    if (!tokenData || tokenData.price === 0) return '';
+    
+    const amount = parseFloat(activity.amount);
+    if (isNaN(amount)) return '';
+    
+    const value = amount * tokenData.price;
+    return `≈ $${value.toFixed(2)}`;
+  };
+
   const ActivityCard: React.FC<{ activity: Activity }> = ({ activity }) => {
     return (
       <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{activity.symbol}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {activity.symbol}
+              {calculateActivityValue(activity) && (
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  {calculateActivityValue(activity)}
+                </span>
+              )}
+            </h3>
             <p className="text-sm text-gray-600">{activity.name}</p>
           </div>
           <div className="flex flex-row items-end space-x-2">
