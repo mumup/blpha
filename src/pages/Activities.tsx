@@ -172,8 +172,8 @@ const Activities: React.FC = () => {
                 2
               </span>
             )}
-            {/* 第二阶段都是先到先得，显示FCFS标志 */}
-            {activity.isStage2 && (
+            {/* 显示FCFS标志 */}
+            {activity.isFCFS && (
               <span className="inline-block px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded mt-1">
                 FCFS
               </span>
