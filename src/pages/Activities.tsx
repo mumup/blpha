@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { MarketWebbService } from '../services/cexapi';
 import type { Activity, ActivitiesResponse } from '../types';
 
+const VITE_CALENDAR_API_BASE_URL = import.meta.env.VITE_CALENDAR_API_BASE_URL;
+
 const Activities: React.FC = () => {
   const [, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +25,7 @@ const Activities: React.FC = () => {
       
       // 并行获取活动数据和价格数据
       const [activitiesResponse, pricesResponse] = await Promise.all([
-        fetch('https://calendar.blpha.xyz/api/activities'),
+        fetch(`${VITE_CALENDAR_API_BASE_URL}/api/activities`),
         MarketWebbService.getAlphaTokenPricesWithSymbols()
       ]);
       
@@ -234,8 +236,19 @@ const Activities: React.FC = () => {
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">活动日历</h1>
-        <p className="text-gray-600 dark:text-gray-400">查看最新的 Alpha 活动信息</p>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">活动日历</h1>
+            <p className="text-gray-600 dark:text-gray-400">查看最新的 Alpha 活动信息</p>
+          </div>
+          <div>
+            <a href='webcal://calendar.blpha.xyz/api/webcal/future.ics' target='_blank'>
+              <button className="px-3 py-1 text-sm bg-slate-400 text-white rounded-lg hover:bg-slate-500 transition-colors">
+                订阅未来活动
+              </button>
+            </a>
+          </div>
+        </div>
       </div>
 
         {/* 今日活动 */}
