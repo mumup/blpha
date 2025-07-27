@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { Layout } from '../components/Layout';
-import { MarketWebbService } from '../services/cexapi';
-import type { Activity, ActivitiesResponse } from '../types';
-
-const VITE_CALENDAR_API_BASE_URL = import.meta.env.VITE_CALENDAR_API_BASE_URL;
+import type { Activity } from '../types';
+import { CalendarService } from '../services/calendar';
 
 const Activities: React.FC = () => {
   const [, setActivities] = useState<Activity[]>([]);
@@ -22,19 +20,17 @@ const Activities: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+
+      const activitiesResponse = await CalendarService.getActivities();
+
+      const symbols = activitiesResponse.data.map(activity => activity.symbol.toUpperCase());
+
+      const pricesResponse = await CalendarService.getAlphaTokenPricesWithSymbols(symbols);
       
-      // 并行获取活动数据和价格数据
-      const [activitiesResponse, pricesResponse] = await Promise.all([
-        fetch(`${VITE_CALENDAR_API_BASE_URL}/api/activities`),
-        MarketWebbService.getAlphaTokenPricesWithSymbols()
-      ]);
-      
-      const data: ActivitiesResponse = await activitiesResponse.json();
-      
-      if (data.success) {
-        setActivities(data.data);
-        setTokenPrices(pricesResponse);
-        categorizeActivities(data.data);
+      if (activitiesResponse.success) {
+        setActivities(activitiesResponse.data);
+        setTokenPrices(pricesResponse as Map<string, { price: number; symbol: string }>);
+        categorizeActivities(activitiesResponse.data);
       } else {
         setError('获取活动数据失败');
       }
