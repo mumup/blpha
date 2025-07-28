@@ -183,4 +183,11 @@ export interface ActivitiesResponse {
   todayStart: string;
   currentTime: string;
   timestamp: string;
-} 
+}
+
+export interface TokenPriceResponse {
+  success: boolean;
+  data: { price: number; symbol: string }[];
+  timestamp: string;
+  total: number;
+}

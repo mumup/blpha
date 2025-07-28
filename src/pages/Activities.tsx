@@ -29,7 +29,10 @@ const Activities: React.FC = () => {
       
       if (activitiesResponse.success) {
         setActivities(activitiesResponse.data);
-        setTokenPrices(pricesResponse as Map<string, { price: number; symbol: string }>);
+        setTokenPrices(pricesResponse.data.reduce((acc, curr) => {
+          acc.set(curr.symbol.toUpperCase(), curr);
+          return acc;
+        }, new Map<string, { price: number; symbol: string }>()));
         categorizeActivities(activitiesResponse.data);
       } else {
         setError('获取活动数据失败');
