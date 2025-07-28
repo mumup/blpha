@@ -179,6 +179,18 @@ const Activities: React.FC = () => {
                 FCFS
               </span>
             )}
+            {/* 显示现货标志 */}
+            {activity.isSpot && (
+              <span className="inline-block px-2 py-1 text-xs font-medium bg-[#F0B90B] text-white rounded mt-1">
+                现货
+              </span>
+            )}
+            {/* 显示合约标志 */}
+            {activity.isFutures && (
+              <span className="inline-block px-2 py-1 text-xs font-medium bg-[#007AFF] text-white rounded mt-1">
+                合约
+              </span>
+            )}
           </div>
         </div>
         
