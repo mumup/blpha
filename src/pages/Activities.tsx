@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { Layout } from '../components/Layout';
 import type { Activity } from '../types';
 import { CalendarService } from '../services/calendar';
+import { LightningBoltIcon } from "@radix-ui/react-icons"
 
 const Activities: React.FC = () => {
   const [, setActivities] = useState<Activity[]>([]);
@@ -149,7 +150,14 @@ const Activities: React.FC = () => {
 
   const ActivityCard: React.FC<{ activity: Activity }> = ({ activity }) => {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow relative">
+        {/* 第二阶段角标 */}
+        {activity.isStage2 && (
+          <div className="absolute -top-2 -right-2 w-6 h-6 bg-gray-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md">
+            2
+          </div>
+        )}
+        
         <div className="flex justify-between items-start mb-3">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -167,18 +175,6 @@ const Activities: React.FC = () => {
               {getTypeLabel(activity.type)}
             </span>
             {/* <span className="text-xs text-gray-500 mt-1">{getChainLabel(activity.chain)}</span> */}
-            {/* 显示第二阶段标签 */}
-            {activity.isStage2 && (
-              <span className="inline-block px-2 py-1 text-xs font-medium bg-orange-100 text-orange-800 rounded mt-1">
-                2
-              </span>
-            )}
-            {/* 显示FCFS标志 */}
-            {activity.isFCFS && (
-              <span className="inline-block px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded mt-1">
-                FCFS
-              </span>
-            )}
             {/* 显示现货标志 */}
             {activity.isSpot && (
               <span className="inline-block px-2 py-1 text-xs font-medium bg-[#F0B90B] text-white rounded mt-1">
@@ -187,9 +183,13 @@ const Activities: React.FC = () => {
             )}
             {/* 显示合约标志 */}
             {activity.isFutures && (
-              <span className="inline-block px-2 py-1 text-xs font-medium bg-[#007AFF] text-white rounded mt-1">
+              <span className="inline-block px-2 py-1 text-xs font-medium bg-[#0ecb81] text-white rounded mt-1">
                 合约
               </span>
+            )}
+            {/* 显示先到先得 闪电标志 */}
+            {activity.isFCFS && (
+              <LightningBoltIcon className="w-6 h-6 text-[#F0B90B] mt-1" />
             )}
           </div>
         </div>
