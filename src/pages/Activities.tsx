@@ -150,7 +150,7 @@ const Activities: React.FC = () => {
 
   const ActivityCard: React.FC<{ activity: Activity }> = ({ activity }) => {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow relative">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow relative">
         {/* 第二阶段角标 */}
         {activity.isStage2 && (
           <div className="absolute -top-2 -right-2 w-6 h-6 bg-gray-400 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md">
