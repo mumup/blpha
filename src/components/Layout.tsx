@@ -16,7 +16,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                🚀Alpha 交易分析
+                🚀Alpha 交易统计
               </h1>
             </div>
             <div className="flex items-center space-x-4">
@@ -29,7 +29,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
-                  交易分析
+                  交易统计
                 </Link>
                 <Link
                   to="/activities"

@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { Layout } from '../components/Layout';
 import type { Activity } from '../types';
 import { CalendarService } from '../services/calendar';
-import { LightningBoltIcon } from "@radix-ui/react-icons"
+import { LightningBoltIcon, UpdateIcon, BellIcon } from "@radix-ui/react-icons"
 
 const Activities: React.FC = () => {
   const [, setActivities] = useState<Activity[]>([]);
@@ -254,8 +254,9 @@ const Activities: React.FC = () => {
           </div>
           <div>
             <a href='webcal://calendar.blpha.xyz/api/webcal/future.ics' target='_blank'>
-              <button className="px-3 py-1 text-sm bg-slate-400 text-white rounded-lg hover:bg-slate-500 transition-colors">
-                订阅未来活动
+              <button className="px-3 py-1 text-sm bg-slate-400 text-white rounded-lg hover:bg-slate-500 transition-colors flex items-center">
+                <BellIcon className="w-4 h-4 mr-2" />
+                订阅
               </button>
             </a>
           </div>
@@ -314,11 +315,10 @@ const Activities: React.FC = () => {
         <div className="mt-8 text-center">
           <button 
             onClick={fetchActivities}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center mx-auto"
+            disabled={loading}
+            className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center mx-auto text-sm"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <UpdateIcon className="w-4 h-4 mr-2" />
             刷新活动
           </button>
         </div>
