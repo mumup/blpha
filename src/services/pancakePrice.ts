@@ -249,7 +249,7 @@ export class PancakePriceService {
     // 检查是否有正在进行的请求，避免重复请求
     const pendingRequest = this.pendingRequests.get(cacheKey);
     if (pendingRequest) {
-      console.log(`⏳ 等待正在进行的请求完成: ${contractAddress}`);
+      console.log(`⏳ 复用进行中的请求: ${contractAddress.slice(0, 8)}...`);
       return pendingRequest;
     }
 
@@ -272,14 +272,14 @@ export class PancakePriceService {
   private static async executeGetTokenPrice(contractAddress: string, amount: string, cacheKey: string): Promise<number> {
     try {
       // 尝试从链上获取价格
-      console.log(`🔍 正在获取 ${contractAddress} 的价格 (数量: ${amount})...`);
+      console.log(`🔍 获取价格: ${contractAddress.slice(0, 8)}... (${amount})`);
 
       let price = await this.getTokenPriceFromPancake(contractAddress, amount);
 
       // 更新缓存
       if (price > 0) {
         this.cache.set(cacheKey, { price, timestamp: Date.now() });
-        console.log(`💰 获取到 ${contractAddress} 链上总价值: $${price} (数量: ${amount})`);
+        console.log(`💰 ${contractAddress.slice(0, 8)}...: $${price}`);
       } else {
         console.log(`❌ 无法获取 ${contractAddress} 的价格`);
         return 0;

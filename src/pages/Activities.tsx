@@ -15,7 +15,9 @@ const Activities: React.FC = () => {
   const [tokenPrices, setTokenPrices] = useState<Map<string, { price: number; symbol: string }>>(new Map());
   const [chainPrices, setChainPrices] = useState<Map<string, number>>(new Map());
   const [loadingChainPrices, setLoadingChainPrices] = useState(false);
+  const [chainPriceProgress, setChainPriceProgress] = useState({ current: 0, total: 0 });
   const hasInitialized = useRef(false);
+  const timeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
     // 防止React.StrictMode导致的重复执行
@@ -25,6 +27,14 @@ const Activities: React.FC = () => {
     hasInitialized.current = true;
     
     fetchActivities();
+  }, []);
+
+  // 清理定时器，防止内存泄漏
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+      timeoutRefs.current = [];
+    };
   }, []);
 
   const fetchActivities = async () => {
@@ -45,10 +55,10 @@ const Activities: React.FC = () => {
           return acc;
         }, new Map<string, { price: number; symbol: string; chainName: string }>()));
         
-        // 获取链上价格
-        await fetchChainPrices(activitiesResponse.data);
-        
         categorizeActivities(activitiesResponse.data);
+        
+        // 异步获取链上价格，不阻塞页面渲染
+        fetchChainPricesAsync(activitiesResponse.data);
       } else {
         setError('获取活动数据失败');
       }
@@ -60,15 +70,15 @@ const Activities: React.FC = () => {
     }
   };
 
-  const fetchChainPrices = async (activities: Activity[]) => {
+  const fetchChainPricesAsync = (activities: Activity[]) => {
     const currentTime = new Date();
-    const chainPricesMap = new Map<string, number>();
 
     // 筛选需要从链上获取价格的活动
     const activitiesNeedChainPrice = activities.filter(activity => {
       const startTime = new Date(activity.startTime);
-      return startTime <= currentTime && 
-             activity.chain === 'BSC' && 
+      return startTime <= currentTime &&
+             activity.amount &&
+             activity.chain === 'BSC' &&
              activity.ca && 
              activity.ca.trim() !== '';
     });
@@ -77,29 +87,61 @@ const Activities: React.FC = () => {
       return;
     }
 
-    console.log(`🔗 需要从链上获取价格的活动数量: ${activitiesNeedChainPrice.length}`);
+    console.log(`🔗 开始异步获取 ${activitiesNeedChainPrice.length} 个活动的链上价格...`);
     setLoadingChainPrices(true);
+    setChainPriceProgress({ current: 0, total: activitiesNeedChainPrice.length });
 
-    try {
-      // 并行获取所有需要的链上价格
-      const pricePromises = activitiesNeedChainPrice.map(async (activity) => {
+    // 异步逐个获取价格，不阻塞主线程
+    activitiesNeedChainPrice.forEach((activity, index) => {
+      // 使用setTimeout进行任务调度，避免阻塞UI
+      const timeoutId = setTimeout(async () => {
         try {
           const amount = activity.amount && activity.amount.trim() !== '' ? activity.amount : "1";
+          console.log(`🔍 [${index + 1}/${activitiesNeedChainPrice.length}] 获取 ${activity.symbol} 价格...`);
+          
           const price = await PancakePriceService.getTokenPrice(activity.ca!, amount);
+          
           if (price > 0) {
-            chainPricesMap.set(activity.ca!.toLowerCase(), price);
-            console.log(`✅ 获取 ${activity.symbol} (${activity.ca}) 链上价格: $${price} (数量: ${amount})`);
+            // 实时更新单个价格
+            setChainPrices(prev => {
+              const newMap = new Map(prev);
+              newMap.set(activity.ca!.toLowerCase(), price);
+              return newMap;
+            });
+            console.log(`✅ [${index + 1}/${activitiesNeedChainPrice.length}] ${activity.symbol}: $${price}`);
+          } else {
+            console.log(`❌ [${index + 1}/${activitiesNeedChainPrice.length}] ${activity.symbol}: 获取失败`);
+          }
+          
+          // 更新进度
+          setChainPriceProgress(prev => ({ ...prev, current: index + 1 }));
+          
+          // 如果是最后一个，关闭加载状态
+          if (index === activitiesNeedChainPrice.length - 1) {
+            setTimeout(() => {
+              setLoadingChainPrices(false);
+              setChainPriceProgress({ current: 0, total: 0 });
+            }, 1000);
           }
         } catch (error) {
-          console.error(`❌ 获取 ${activity.symbol} (${activity.ca}) 链上价格失败:`, error);
+          console.error(`❌ 获取 ${activity.symbol} 链上价格失败:`, error);
+          
+          // 更新进度
+          setChainPriceProgress(prev => ({ ...prev, current: index + 1 }));
+          
+          // 如果是最后一个，关闭加载状态
+          if (index === activitiesNeedChainPrice.length - 1) {
+            setTimeout(() => {
+              setLoadingChainPrices(false);
+              setChainPriceProgress({ current: 0, total: 0 });
+            }, 1000);
+          }
         }
-      });
-
-      await Promise.allSettled(pricePromises);
-      setChainPrices(chainPricesMap);
-    } finally {
-      setLoadingChainPrices(false);
-    }
+      }, index * 100); // 每个请求间隔100ms，避免同时发起过多请求
+      
+      // 保存timeout引用用于清理
+      timeoutRefs.current.push(timeoutId);
+    });
   };
 
   const categorizeActivities = (activities: Activity[]) => {
@@ -406,8 +448,19 @@ const Activities: React.FC = () => {
             <div className="mt-3 text-center">
               <div className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
-                正在获取链上价格...
+                {chainPriceProgress.total > 0 ? 
+                  `正在获取链上价格... (${chainPriceProgress.current}/${chainPriceProgress.total})` :
+                  '正在获取链上价格...'
+                }
               </div>
+              {chainPriceProgress.total > 0 && (
+                <div className="mt-2 w-64 mx-auto bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${(chainPriceProgress.current / chainPriceProgress.total) * 100}%` }}
+                  ></div>
+                </div>
+              )}
             </div>
           )}
         </div>
