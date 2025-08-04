@@ -76,7 +76,7 @@ const Activities: React.FC = () => {
     // 筛选需要从链上获取价格的活动
     const activitiesNeedChainPrice = activities.filter(activity => {
       const startTime = new Date(activity.startTime);
-      return startTime <= currentTime &&
+      return currentTime <= startTime &&
              activity.amount &&
              activity.chain === 'BSC' &&
              activity.ca && 
