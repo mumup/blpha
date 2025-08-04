@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dayjs from 'dayjs';
 import { Layout } from '../components/Layout';
 import type { Activity } from '../types';
 import { CalendarService } from '../services/calendar';
+import { PancakePriceService } from '../services/pancakePrice';
 import { LightningBoltIcon, UpdateIcon, BellIcon } from "@radix-ui/react-icons"
 
 const Activities: React.FC = () => {
@@ -12,8 +13,17 @@ const Activities: React.FC = () => {
   const [todayActivities, setTodayActivities] = useState<Activity[]>([]);
   const [futureActivities, setFutureActivities] = useState<Activity[]>([]);
   const [tokenPrices, setTokenPrices] = useState<Map<string, { price: number; symbol: string }>>(new Map());
+  const [chainPrices, setChainPrices] = useState<Map<string, number>>(new Map());
+  const [loadingChainPrices, setLoadingChainPrices] = useState(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // 防止React.StrictMode导致的重复执行
+    if (hasInitialized.current) {
+      return;
+    }
+    hasInitialized.current = true;
+    
     fetchActivities();
   }, []);
 
@@ -31,9 +41,13 @@ const Activities: React.FC = () => {
       if (activitiesResponse.success) {
         setActivities(activitiesResponse.data);
         setTokenPrices(pricesResponse.data.reduce((acc, curr) => {
-          acc.set(curr.symbol.toUpperCase(), curr);
+          acc.set(`${curr.chainName.toUpperCase()}-${curr.symbol.toUpperCase()}`, curr);
           return acc;
-        }, new Map<string, { price: number; symbol: string }>()));
+        }, new Map<string, { price: number; symbol: string; chainName: string }>()));
+        
+        // 获取链上价格
+        await fetchChainPrices(activitiesResponse.data);
+        
         categorizeActivities(activitiesResponse.data);
       } else {
         setError('获取活动数据失败');
@@ -43,6 +57,48 @@ const Activities: React.FC = () => {
       console.error('获取活动数据失败:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchChainPrices = async (activities: Activity[]) => {
+    const currentTime = new Date();
+    const chainPricesMap = new Map<string, number>();
+
+    // 筛选需要从链上获取价格的活动
+    const activitiesNeedChainPrice = activities.filter(activity => {
+      const startTime = new Date(activity.startTime);
+      return startTime <= currentTime && 
+             activity.chain === 'BSC' && 
+             activity.ca && 
+             activity.ca.trim() !== '';
+    });
+
+    if (activitiesNeedChainPrice.length === 0) {
+      return;
+    }
+
+    console.log(`🔗 需要从链上获取价格的活动数量: ${activitiesNeedChainPrice.length}`);
+    setLoadingChainPrices(true);
+
+    try {
+      // 并行获取所有需要的链上价格
+      const pricePromises = activitiesNeedChainPrice.map(async (activity) => {
+        try {
+          const amount = activity.amount && activity.amount.trim() !== '' ? activity.amount : "1";
+          const price = await PancakePriceService.getTokenPrice(activity.ca!, amount);
+          if (price > 0) {
+            chainPricesMap.set(activity.ca!.toLowerCase(), price);
+            console.log(`✅ 获取 ${activity.symbol} (${activity.ca}) 链上价格: $${price} (数量: ${amount})`);
+          }
+        } catch (error) {
+          console.error(`❌ 获取 ${activity.symbol} (${activity.ca}) 链上价格失败:`, error);
+        }
+      });
+
+      await Promise.allSettled(pricePromises);
+      setChainPrices(chainPricesMap);
+    } finally {
+      setLoadingChainPrices(false);
     }
   };
 
@@ -137,15 +193,39 @@ const Activities: React.FC = () => {
   const calculateActivityValue = (activity: Activity): string => {
     if (!activity.amount || activity.amount === '') return '';
     
-    // 通过symbol匹配价格
-    const tokenData = tokenPrices.get(activity.symbol.toUpperCase());
-    if (!tokenData || tokenData.price === 0) return '';
-    
     const amount = parseFloat(activity.amount);
     if (isNaN(amount)) return '';
     
-    const value = amount * tokenData.price;
-    return `≈ $${value.toFixed(2)}`;
+    let value = 0;
+    let priceSource = '';
+    
+    // 优先使用链上价格（当满足条件时）
+    const currentTime = new Date();
+    const startTime = new Date(activity.startTime);
+    
+    if (currentTime <= startTime && 
+        activity.chain === 'BSC' && 
+        activity.ca && 
+        activity.ca.trim() !== '') {
+      const chainPrice = chainPrices.get(activity.ca.toLowerCase());
+      if (chainPrice && chainPrice > 0) {
+        value = chainPrice; // chainPrice 已经是总价值，不需要再乘以数量
+        priceSource = '🔗';
+      }
+    }
+    
+    // 如果没有链上价格，使用API价格
+    if (value === 0) {
+      const tokenData = tokenPrices.get(`${activity.chain.toUpperCase()}-${activity.symbol.toUpperCase()}`);
+      if (tokenData && tokenData.price > 0) {
+        value = amount * tokenData.price; // API价格是单价，需要乘以数量
+        priceSource = '';
+      }
+    }
+    
+    if (value === 0) return '';
+    
+    return `${priceSource} ≈ $${value.toFixed(2)}`;
   };
 
   const ActivityCard: React.FC<{ activity: Activity }> = ({ activity }) => {
@@ -321,6 +401,15 @@ const Activities: React.FC = () => {
             <UpdateIcon className="w-4 h-4 mr-2" />
             刷新活动
           </button>
+          
+          {loadingChainPrices && (
+            <div className="mt-3 text-center">
+              <div className="inline-flex items-center text-sm text-gray-600 dark:text-gray-400">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>
+                正在获取链上价格...
+              </div>
+            </div>
+          )}
         </div>
     </Layout>
   );

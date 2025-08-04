@@ -173,6 +173,7 @@ export interface Activity {
   futuresTime: string;
   chain: string;
   isSpot: boolean;
+  ca?: string; // 合约地址，用于从链上获取价格
   isSecondStage?: boolean; // 标识是否为第二阶段（用于内部处理）
 }
 
@@ -187,7 +188,7 @@ export interface ActivitiesResponse {
 
 export interface TokenPriceResponse {
   success: boolean;
-  data: { price: number; symbol: string }[];
+  data: { price: number; symbol: string; chainName: string }[];
   timestamp: string;
   total: number;
 }
