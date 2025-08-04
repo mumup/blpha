@@ -42,7 +42,7 @@ export class PancakePriceService {
   private static readonly CACHE_DURATION = 30 * 1000; // 30秒缓存
   private static pendingRequests: Map<string, Promise<number>> = new Map(); // 防止重复请求
 
-  private static provider = new JsonRpcProvider('https://bsc-dataseed.binance.org/');
+  private static provider = new JsonRpcProvider('https://bsc-rpc.publicnode.com/');
   // 创建合约实例
   private static quoterContract = new Contract(QUOTER_V2_ADDRESS, quoterV2ABI, this.provider);
   private static factoryContract = new Contract(FACTORY_ADDRESS, factoryABI, this.provider);
