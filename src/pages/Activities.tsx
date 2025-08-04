@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import dayjs from 'dayjs';
 import { Layout } from '../components/Layout';
+import { Skeleton } from '../components/Skeleton';
 import type { Activity } from '../types';
 import { CalendarService } from '../services/calendar';
 import { PancakePriceService } from '../services/pancakePrice';
@@ -270,6 +271,19 @@ const Activities: React.FC = () => {
     return `${priceSource} ≈ $${value.toFixed(2)}`;
   };
 
+  // 判断是否应该显示价格skeleton
+  const shouldShowPriceSkeleton = (activity: Activity): boolean => {
+    const currentTime = new Date();
+    const startTime = new Date(activity.startTime);
+    
+    return loadingChainPrices && 
+           currentTime <= startTime && 
+           activity.chain === 'BSC' && 
+           !!activity.ca && 
+           activity.ca.trim() !== '' &&
+           !chainPrices.has(activity.ca.toLowerCase());
+  };
+
   const ActivityCard: React.FC<{ activity: Activity }> = ({ activity }) => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow relative">
@@ -284,7 +298,11 @@ const Activities: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {activity.symbol}
-              {calculateActivityValue(activity) && (
+              {shouldShowPriceSkeleton(activity) ? (
+                <span className="ml-2 inline-block">
+                  <Skeleton width="80px" height="16px" />
+                </span>
+              ) : calculateActivityValue(activity) && (
                 <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
                   {calculateActivityValue(activity)}
                 </span>
@@ -338,14 +356,85 @@ const Activities: React.FC = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">加载中...</p>
+  // Skeleton组件
+  const ActivityCardSkeleton = () => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1">
+          <Skeleton width="96px" height="24px" className="mb-2" />
+          <Skeleton width="128px" height="16px" />
+        </div>
+        <div className="flex flex-row items-end space-x-2">
+          <Skeleton width="64px" height="24px" />
+          <Skeleton width="48px" height="24px" />
         </div>
       </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between">
+          <Skeleton width="80px" height="16px" />
+          <Skeleton width="64px" height="16px" />
+        </div>
+        <div className="flex justify-between">
+          <Skeleton width="96px" height="16px" />
+          <Skeleton width="48px" height="16px" />
+        </div>
+        <div className="flex justify-between">
+          <Skeleton width="64px" height="16px" />
+          <Skeleton width="80px" height="16px" />
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <Skeleton width="128px" height="32px" className="mb-2" />
+              <Skeleton width="192px" height="16px" />
+            </div>
+            <Skeleton width="64px" height="32px" />
+          </div>
+        </div>
+
+        {/* 今日活动 Skeleton */}
+        <div className="mb-8">
+          <div className="flex items-center mb-4">
+            <div className="w-2 h-8 bg-green-500 rounded-full mr-3"></div>
+            <Skeleton width="96px" height="24px" className="mr-3" />
+            <Skeleton width="64px" height="24px" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <ActivityCardSkeleton key={`today-skeleton-${index}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* 未来活动 Skeleton */}
+        <div>
+          <div className="flex items-center mb-4">
+            <div className="w-2 h-8 bg-blue-500 rounded-full mr-3"></div>
+            <Skeleton width="96px" height="24px" className="mr-3" />
+            <Skeleton width="64px" height="24px" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ActivityCardSkeleton key={`future-skeleton-${index}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* 刷新按钮 Skeleton */}
+        <div className="mt-8 text-center">
+          <Skeleton width="96px" height="40px" className="mx-auto" />
+        </div>
+      </Layout>
     );
   }
 
